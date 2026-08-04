@@ -1,0 +1,292 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Sistema visual "Sazón Propio"
+   Todo el arte es CSS y SVG: ni una imagen externa, ni una fuente remota.
+   Eso da cero peticiones a terceros y, sobre todo, cero saltos de layout
+   (nada aparece después y empuja el contenido).
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --crema: #fff8ec;
+    --tomate: #d93a28;
+    --mostaza: #f1b01f;
+    --albahaca: #2b8c50;
+    --carbon: #241d1b;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Compensa la barra de navegación fija cuando se salta a un ancla. */
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--crema);
+    color: var(--carbon);
+    font-family: theme('fontFamily.sistema');
+    /* Suavizado explícito: la pila del sistema se ve distinta por plataforma. */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Foco visible SIEMPRE y en todo. Se usa :focus-visible para no molestar a
+     quien navega con mouse, pero sin dejar a nadie perdido con el teclado. */
+  *:focus-visible {
+    outline: 3px solid var(--tomate);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Selección con color de la marca: detalle pequeño, sensación de sitio hecho
+     a mano en vez de plantilla. */
+  ::selection {
+    background-color: #ffdd84;
+    color: #4a130c;
+  }
+
+  h1,
+  h2,
+  h3 {
+    /* El texto grande con tracking neutro se ve suelto; se cierra un poco. */
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- estructura */
+  .contenedor {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-7 lg:px-8;
+  }
+
+  .seccion {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+
+  /* Antetítulo tipo "etiqueta de frasco de especias". */
+  .antetitulo {
+    @apply inline-flex items-center gap-2 rounded-full border border-mostaza-300/70 bg-mostaza-50 px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-mostaza-700;
+  }
+
+  .titulo-seccion {
+    @apply text-3xl font-black leading-[1.1] text-carbon-800 sm:text-4xl lg:text-[2.75rem];
+  }
+
+  .parrafo {
+    @apply text-[1.0625rem] leading-relaxed text-carbon-500;
+  }
+
+  /* ---------------------------------------------------------------- superficies */
+  .tarjeta {
+    @apply relative rounded-3xl border border-masa-200 bg-white p-6 shadow-plato sm:p-7;
+  }
+
+  /* Azulejo de cocina: rombos de dos cremas, como el backsplash detrás de la
+     estufa. Hecho con gradientes repetidos, sin imagen. */
+  .azulejo {
+    background-color: #fffdf8;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(217, 58, 40, 0.055) 0 12px, transparent 12px 24px),
+      repeating-linear-gradient(-45deg, rgba(241, 176, 31, 0.06) 0 12px, transparent 12px 24px);
+    background-size: 34px 34px;
+  }
+
+  /* Mesa de madera: vetas verticales suaves para el pie de página. */
+  .madera {
+    background-color: #4b3423;
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 248, 236, 0.05) 0 2px,
+        transparent 2px 9px,
+        rgba(0, 0, 0, 0.12) 9px 11px,
+        transparent 11px 22px
+      );
+  }
+
+  /* Lunares de mantel: para franjas que necesitan textura sin ruido. */
+  .lunares {
+    background-image: radial-gradient(rgba(181, 42, 28, 0.16) 1.6px, transparent 1.7px);
+    background-size: 18px 18px;
+  }
+
+  /* Papel de receta con renglones y margen rojo a la izquierda. */
+  .papel-receta {
+    background-color: #fffdf8;
+    background-image:
+      linear-gradient(transparent 0 1.9rem, rgba(147, 103, 67, 0.16) 1.9rem 2rem),
+      linear-gradient(90deg, transparent 0 2.55rem, rgba(217, 58, 40, 0.28) 2.55rem 2.62rem, transparent 2.62rem);
+    background-size: 100% 2rem, 100% 100%;
+  }
+
+  /* ---------------------------------------------------------------- botones */
+  .boton {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .boton-primario {
+    @apply boton bg-tomate-500 text-white shadow-plato hover:-translate-y-0.5 hover:bg-tomate-600 hover:shadow-plato-alta active:translate-y-0;
+  }
+
+  .boton-secundario {
+    @apply boton border-2 border-carbon-800 bg-white text-carbon-800 hover:-translate-y-0.5 hover:bg-mostaza-50 active:translate-y-0;
+  }
+
+  .boton-fantasma {
+    @apply boton border border-masa-300 bg-white/70 text-carbon-600 hover:bg-white;
+  }
+
+  /* ---------------------------------------------------------------- formulario */
+  .etiqueta {
+    @apply mb-1.5 block text-sm font-bold text-carbon-700;
+  }
+
+  .campo {
+    @apply w-full rounded-2xl border-2 border-masa-300 bg-white px-4 py-3 text-base text-carbon-800 transition-colors placeholder:text-carbon-300 focus:border-tomate-400 focus:outline-none focus-visible:outline-none;
+  }
+
+  /* El estado de error se ata a aria-invalid y no a una clase: así el estilo y
+     lo que anuncia el lector de pantalla nunca se desincronizan. */
+  .campo[aria-invalid='true'] {
+    @apply border-tomate-500 bg-tomate-50;
+  }
+
+  .campo:disabled {
+    @apply cursor-not-allowed bg-carbon-50 text-carbon-400;
+  }
+
+  .ayuda-campo {
+    @apply mt-1.5 text-xs text-carbon-400;
+  }
+
+  .error-campo {
+    @apply mt-1.5 flex items-start gap-1.5 text-sm font-semibold text-tomate-600;
+  }
+
+  /* ---------------------------------------------------------------- adornos */
+  /* Cinta diagonal para la esquina de la tarjeta destacada. */
+  .cinta {
+    @apply absolute right-0 top-0 overflow-hidden rounded-tr-3xl;
+    width: 8.5rem;
+    height: 8.5rem;
+  }
+
+  .cinta span {
+    @apply absolute block bg-albahaca-500 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-md;
+    width: 13rem;
+    top: 2.1rem;
+    right: -3.6rem;
+    transform: rotate(45deg);
+  }
+
+  /* Números alineados en columnas: precios y tablas dejan de "bailar" al
+     comparar planes. */
+  .numeros-tabulares {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* Separador con forma de onda (borde de mantel), en SVG embebido. */
+  .onda-inferior {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v4c-10 0-10 4-20 4s-10-4-20-4-10 4-20 4-10-4-20-4-10 4-20 4-10-4-20-4z' fill='%23000'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v4c-10 0-10 4-20 4s-10-4-20-4-10 4-20 4-10-4-20-4-10 4-20 4-10-4-20-4z' fill='%23000'/%3E%3C/svg%3E");
+    -webkit-mask-size: 120px 100%;
+    mask-size: 120px 100%;
+    -webkit-mask-repeat: repeat-x;
+    mask-repeat: repeat-x;
+  }
+
+  /* Marcador de texto tipo resaltador amarillo, con la mancha imperfecta. */
+  .resaltado {
+    @apply relative inline-block;
+    background-image: linear-gradient(104deg, rgba(255, 221, 132, 0) 0.5%, rgba(255, 221, 132, 0.85) 2%, rgba(251, 201, 74, 0.75) 97%, rgba(255, 221, 132, 0) 99%);
+    padding: 0 0.25em;
+    border-radius: 0.35em;
+  }
+
+  /* Subrayado a mano alzada bajo una palabra clave del título. */
+  .subrayado-marcador {
+    @apply relative whitespace-nowrap;
+  }
+
+  .subrayado-marcador::after {
+    content: '';
+    @apply absolute left-0 right-0 -bottom-1.5 block h-2;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10' preserveAspectRatio='none'%3E%3Cpath d='M2 7c40-5 90-6 196-3' stroke='%23f1b01f' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
+  /* Contenedor de los "widgets" flotantes (frutas, utensilios). Nunca deben
+     robar clics ni ser leídos por un lector de pantalla. */
+  .adorno {
+    @apply pointer-events-none absolute select-none;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-masa-200 bg-white px-3 py-1.5 text-xs font-bold text-carbon-600;
+  }
+
+  /* Viñeta de check dentro de un círculo de albahaca. */
+  .vineta-check {
+    @apply mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-albahaca-100 text-albahaca-700;
+  }
+}
+
+@layer utilities {
+  .sombra-texto-calida {
+    text-shadow: 0 2px 12px rgba(74, 19, 12, 0.28);
+  }
+
+  .arrastre-x {
+    /* Scroll horizontal contenido: la página nunca se desplaza en horizontal. */
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+
+/* ==========================================================================
+   Movimiento reducido.
+   Si el sistema operativo pide menos animación, se apaga TODO: el vapor de la
+   olla, las frutas flotando y el scroll suave. Para alguien con vestibular
+   sensitivity esas animaciones no son decoración, son un problema.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* El vapor animado sin animación queda como una mancha fija: se oculta. */
+  .vapor-humo {
+    display: none !important;
+  }
+}
+
+/* Impresión: que el comprobante del checkout se pueda imprimir legible. */
+@media print {
+  .no-imprimir {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}

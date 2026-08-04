@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node *)",
+      "PowerShell($c = Get-Command vercel -ErrorAction SilentlyContinue; if \\($c\\) { \"vercel: \" + $c.Source; vercel --version } else { \"vercel CLI no instalado\" })"
+    ]
+  }
+}

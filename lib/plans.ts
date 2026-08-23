@@ -15,7 +15,7 @@ export interface Plan {
   lema: string;
   /**
    * Precio en pesos colombianos, sin centavos. Wompi cobra en centavos.
-   * En el sitio solo existen tres precios (48.900 / 69.900 / 89.900): no hay
+   * En el sitio solo existen tres precios (2.000 / 69.900 / 494.900): no hay
    * precios tachados ni "antes de", para que nada suene a promoción inflada.
    */
   precio: number;
@@ -38,7 +38,7 @@ export const PLANES: Plan[] = [
     id: 'esencial',
     nombre: 'Esencial',
     lema: 'Aprende a cocinar bien para tu casa',
-    precio: 48900,
+    precio: 2000,
     destacado: false,
     paraQuien: 'Para ti que arrancas de cero y quieres dejar de improvisar en la cocina.',
     beneficios: [
@@ -72,7 +72,7 @@ export const PLANES: Plan[] = [
     id: 'avanzado',
     nombre: 'Avanzado',
     lema: 'De cocinar rico a cobrar por lo que cocinas',
-    precio: 89900,
+    precio: 494900,
     destacado: false,
     paraQuien: 'Para ti que ya quieres vender: almuerzos, postres, tortas o menús por encargo.',
     beneficios: [

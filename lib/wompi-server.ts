@@ -12,11 +12,28 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 import { MONEDA } from '@/lib/plans';
 import type { EstadoTransaccion, TipoDocumento } from '@/lib/payment-options';
+import { clasificarErrorGateway, type CodigoErrorPago } from '@/lib/payment-errors';
 import { entornoWompi } from '@/lib/server-env';
 import { wompiBaseUrl } from '@/lib/wompi-endpoint';
 
 function sha256(texto: string): string {
   return createHash('sha256').update(texto, 'utf8').digest('hex');
+}
+
+/**
+ * Error de una falla de la PASARELA (red caída, bloqueo por seguridad, rate
+ * limiting, etc.), ya clasificada y con el mensaje final en español listo
+ * para mostrar. Se distingue de un `Error` genérico para que la ruta de API
+ * elija el status HTTP correcto (ver app/api/wompi/pay/route.ts).
+ */
+export class ErrorPasarela extends Error {
+  readonly codigo: CodigoErrorPago;
+
+  constructor(codigo: CodigoErrorPago, mensaje: string) {
+    super(mensaje);
+    this.name = 'ErrorPasarela';
+    this.codigo = codigo;
+  }
 }
 
 /**
@@ -46,27 +63,56 @@ export interface TokensAceptacionWompi {
  */
 export async function obtenerTokensAceptacion(): Promise<TokensAceptacionWompi> {
   const { llavePublica } = entornoWompi();
-  const respuesta = await fetch(`${wompiBaseUrl(llavePublica)}/merchants/${llavePublica}`, {
-    // Sin caché: el token de aceptación caduca y uno vencido tumba el pago.
-    cache: 'no-store',
-  });
 
-  if (!respuesta.ok) {
-    throw new Error(`Wompi respondió ${respuesta.status} al pedir los tokens de aceptación.`);
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${wompiBaseUrl(llavePublica)}/merchants/${llavePublica}`, {
+      // Sin caché: el token de aceptación caduca y uno vencido tumba el pago.
+      cache: 'no-store',
+    });
+  } catch (fallo) {
+    console.error('[wompi] no se pudo conectar para pedir los tokens de aceptación', fallo);
+    const clasificado = clasificarErrorGateway({ redCaida: true });
+    throw new ErrorPasarela(clasificado.codigo, `${clasificado.mensaje} ${clasificado.consejo ?? ''}`.trim());
   }
 
-  const cuerpo = (await respuesta.json()) as {
+  // Texto primero, JSON después: si lo que volvió no es JSON (por ejemplo una
+  // página de bloqueo de un WAF delante de la API de Wompi), `.json()`
+  // lanzaría antes de poder distinguir esa causa de un simple 5xx.
+  const textoCrudo = await respuesta.text().catch(() => '');
+  let cuerpo: {
     data?: {
       presigned_acceptance?: { acceptance_token?: string; permalink?: string };
       presigned_personal_data_auth?: { acceptance_token?: string; permalink?: string };
     };
-  };
+  } | null = null;
+  try {
+    cuerpo = textoCrudo ? JSON.parse(textoCrudo) : null;
+  } catch {
+    cuerpo = null;
+  }
 
-  const aceptacion = cuerpo.data?.presigned_acceptance;
-  const datos = cuerpo.data?.presigned_personal_data_auth;
+  if (!respuesta.ok) {
+    console.error('[wompi] /merchants respondió con error', {
+      httpStatus: respuesta.status,
+      cuerpoCrudo: cuerpo ? undefined : textoCrudo.slice(0, 300),
+    });
+    const clasificado = clasificarErrorGateway({
+      httpStatus: respuesta.status,
+      respuestaNoJson: cuerpo === null && textoCrudo.length > 0,
+    });
+    throw new ErrorPasarela(clasificado.codigo, `${clasificado.mensaje} ${clasificado.consejo ?? ''}`.trim());
+  }
+
+  const aceptacion = cuerpo?.data?.presigned_acceptance;
+  const datos = cuerpo?.data?.presigned_personal_data_auth;
 
   if (!aceptacion?.acceptance_token) {
-    throw new Error('Wompi no devolvió el token de aceptación.');
+    console.error('[wompi] respuesta de /merchants sin token de aceptación', cuerpo);
+    throw new ErrorPasarela(
+      'DESCONOCIDO',
+      'La pasarela de pagos no está configurada correctamente. Escríbenos para completar tu compra.',
+    );
   }
 
   return {
@@ -126,25 +172,75 @@ export async function crearTransaccion(datos: DatosTransaccion): Promise<Transac
     cuerpoPeticion.accept_personal_auth = datos.tokenDatosPersonales;
   }
 
-  const respuesta = await fetch(`${wompiBaseUrl(llavePrivada)}/transactions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${llavePrivada}`,
-    },
-    body: JSON.stringify(cuerpoPeticion),
-    cache: 'no-store',
-  });
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${wompiBaseUrl(llavePrivada)}/transactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${llavePrivada}`,
+      },
+      body: JSON.stringify(cuerpoPeticion),
+      cache: 'no-store',
+    });
+  } catch (fallo) {
+    // El fetch nunca llegó a Wompi: DNS, timeout, sin salida a internet desde
+    // el servidor... Nada de esto tiene un status HTTP que clasificar.
+    console.error('[wompi] no se pudo conectar para crear la transacción', {
+      referencia: datos.referencia,
+      mensaje: fallo instanceof Error ? fallo.message : String(fallo),
+    });
+    const clasificado = clasificarErrorGateway({ redCaida: true });
+    throw new ErrorPasarela(clasificado.codigo, `${clasificado.mensaje} ${clasificado.consejo ?? ''}`.trim());
+  }
 
-  const cuerpo = (await respuesta.json().catch(() => null)) as
-    | { data?: { id?: string; status?: string; reference?: string }; error?: { reason?: unknown } }
-    | null;
+  // Texto primero, JSON después: un bloqueo de WAF/firewall delante de la API
+  // de Wompi (IP marcada como sospechosa, por ejemplo) típicamente responde
+  // con una página HTML, no con el JSON de error que se espera aquí.
+  const textoCrudo = await respuesta.text().catch(() => '');
+  let cuerpo: {
+    data?: { id?: string; status?: string; reference?: string };
+    error?: { type?: string; reason?: unknown; messages?: unknown };
+  } | null = null;
+  try {
+    cuerpo = textoCrudo ? JSON.parse(textoCrudo) : null;
+  } catch {
+    cuerpo = null;
+  }
 
   if (!respuesta.ok || !cuerpo?.data?.id) {
-    // El detalle real queda en el log del servidor; al navegador va un mensaje
-    // genérico para no exponer estructura interna de la pasarela.
-    console.error('[wompi] error creando transacción', respuesta.status, JSON.stringify(cuerpo));
-    throw new Error('Wompi no aceptó la transacción.');
+    // El detalle real queda en el log del servidor; al navegador nunca le
+    // llega la estructura interna cruda de la pasarela.
+    console.error('[wompi] error creando transacción', {
+      httpStatus: respuesta.status,
+      error: cuerpo?.error,
+      cuerpoCrudo: cuerpo ? undefined : textoCrudo.slice(0, 300),
+      referencia: datos.referencia,
+    });
+
+    // Si Wompi devolvió su formato habitual de error de VALIDACIÓN, ese
+    // detalle sí describe algo corregible (un campo mal formado, por
+    // ejemplo). Si no —403/429/5xx, o ni siquiera vino JSON—, el problema es
+    // la pasarela o la conexión, y así se lo decimos en vez de un mensaje
+    // fijo que no distingue nada.
+    const mensajes = cuerpo?.error?.messages;
+    const detalle =
+      mensajes && typeof mensajes === 'object'
+        ? Object.values(mensajes as Record<string, unknown>).flat().join(' ')
+        : typeof cuerpo?.error?.reason === 'string'
+          ? cuerpo.error.reason
+          : '';
+
+    if (detalle) {
+      throw new Error(detalle);
+    }
+
+    const clasificado = clasificarErrorGateway({
+      httpStatus: respuesta.status,
+      wompiErrorType: cuerpo?.error?.type ?? null,
+      respuestaNoJson: cuerpo === null && textoCrudo.length > 0,
+    });
+    throw new ErrorPasarela(clasificado.codigo, `${clasificado.mensaje} ${clasificado.consejo ?? ''}`.trim());
   }
 
   return {

@@ -8,6 +8,8 @@
  * fácil de que se desincronicen.
  */
 
+import { clasificarRechazo } from './payment-errors';
+
 /** Cuotas que acepta el formulario. Wompi permite 1..36 según franquicia. */
 export const CUOTAS_DISPONIBLES = [1, 2, 3, 6, 9, 12, 18, 24, 36] as const;
 export type Cuotas = (typeof CUOTAS_DISPONIBLES)[number];
@@ -92,23 +94,32 @@ export function esEstadoFinal(estado: string): boolean {
   return estado !== 'PENDING';
 }
 
-/** Mensajes en español para cada estado; el de Wompi llega en inglés. */
+/**
+ * Mensajes en español para cada estado; el de Wompi llega en inglés.
+ *
+ * Cuando hay `razon` (el `status_message` que dio el banco), se identifica
+ * con `clasificarRechazo` en vez de mostrarla cruda: así "insufficient_funds"
+ * o un código del emisor se convierte en "fondos insuficientes" con un
+ * consejo accionable, en vez de un texto que la compradora no entiende.
+ */
 export function mensajeEstado(estado: string, razon?: string | null): string {
   switch (estado) {
     case 'APPROVED':
       return '¡Pago aprobado! Revisa tu correo, ya te enviamos el acceso.';
     case 'PENDING':
       return 'Estamos confirmando el pago con tu banco. No cierres esta página.';
-    case 'DECLINED':
-      return razon
-        ? `Tu banco rechazó el pago: ${razon}. Intenta con otra tarjeta.`
-        : 'Tu banco rechazó el pago. Intenta con otra tarjeta o escríbenos.';
+    case 'DECLINED': {
+      if (!razon) return 'Tu banco rechazó el pago. Intenta con otra tarjeta o escríbenos.';
+      const clasificado = clasificarRechazo(razon);
+      return `${clasificado.mensaje} ${clasificado.consejo ?? ''}`.trim();
+    }
     case 'VOIDED':
       return 'La transacción fue anulada. No se te cobró nada.';
-    case 'ERROR':
-      return razon
-        ? `Hubo un error procesando el pago: ${razon}`
-        : 'Hubo un error procesando el pago. No se te cobró; intenta de nuevo.';
+    case 'ERROR': {
+      if (!razon) return 'Hubo un error procesando el pago. No se te cobró; intenta de nuevo.';
+      const clasificado = clasificarRechazo(razon);
+      return `${clasificado.mensaje} ${clasificado.consejo ?? ''}`.trim();
+    }
     default:
       return 'Estado desconocido. Escríbenos y lo revisamos contigo.';
   }

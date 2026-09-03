@@ -46,7 +46,7 @@ import {
   type TipoDocumento,
 } from '@/lib/payment-options';
 import { formatCOP, type Plan } from '@/lib/plans';
-import { obtenerTokensAceptacion, tokenizarTarjeta } from '@/lib/wompi-browser';
+import { tokenizarTarjeta } from '@/lib/wompi-browser';
 
 /** Etapas de la compra. El componente es una máquina de estados simple. */
 type Etapa = 'formulario' | 'procesando' | 'esperando' | 'aprobado' | 'fallido';
@@ -166,10 +166,12 @@ export function PanelCheckout({ plan }: { plan: Plan }) {
     setMensaje('Validando tu tarjeta…');
 
     try {
-      // 1) Contratos de la pasarela. Se piden aquí porque caducan.
-      await obtenerTokensAceptacion();
+      // Los tokens de aceptación NO se piden aquí: caducan, y el servidor ya los
+      // pide en /api/wompi/pay justo antes de crear la transacción, que es donde
+      // se usan. Pedirlos también desde el navegador solo agregaba una petición
+      // que podía tumbar el cobro sin haberlo intentado.
 
-      // 2) Tokenización: el número y el CVC salen del navegador directo a Wompi.
+      // 1) Tokenización: el número y el CVC salen del navegador directo a Wompi.
       const vence = validarVencimiento(campos.vencimiento);
       if (!vence.partes) throw new Error('Vencimiento inválido');
 
@@ -183,7 +185,7 @@ export function PanelCheckout({ plan }: { plan: Plan }) {
 
       setMensaje('Autorizando el pago con tu banco…');
 
-      // 3) Creamos la transacción en NUESTRO servidor. Se manda el id del plan,
+      // 2) Creamos la transacción en NUESTRO servidor. Se manda el id del plan,
       //    jamás el monto: el precio lo pone el servidor desde lib/plans.ts.
       const respuesta = await fetch('/api/wompi/pay', {
         method: 'POST',
@@ -221,16 +223,24 @@ export function PanelCheckout({ plan }: { plan: Plan }) {
         return;
       }
 
-      // 4) A esperar: el polling arranca en el efecto de abajo.
+      // 3) A esperar: el polling arranca en el efecto de abajo.
       setEtapa('esperando');
       setMensaje('Estamos confirmando el pago con tu banco. No cierres esta página.');
     } catch (fallo) {
       setEtapa('fallido');
-      setMensaje(
-        fallo instanceof Error && fallo.message
-          ? fallo.message
-          : 'Algo falló al procesar el pago. No se te cobró; intenta otra vez.',
-      );
+      if (fallo instanceof TypeError) {
+        // fetch() nunca llegó a destino: sin internet, o el navegador cortó
+        // la conexión antes de recibir respuesta (a nuestro servidor o, si
+        // tokenizarTarjeta ya la atrapó, esto no debería ocurrir por la
+        // tarjeta — queda como red de seguridad para cualquier otro fetch).
+        setMensaje('No pudimos conectar con el servidor. Revisa tu conexión a internet e intenta de nuevo.');
+      } else {
+        setMensaje(
+          fallo instanceof Error && fallo.message
+            ? fallo.message
+            : 'Algo falló al procesar el pago. No se te cobró; intenta otra vez.',
+        );
+      }
     }
   }
 

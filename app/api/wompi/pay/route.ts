@@ -23,12 +23,27 @@ import {
   validarNombre,
   limpiarEspacios,
 } from '@/lib/payment-options';
+import type { CodigoErrorPago } from '@/lib/payment-errors';
 import { buscarPlan, precioEnCentavos } from '@/lib/plans';
 import { construirReferencia } from '@/lib/reference';
 import { variablesFaltantes } from '@/lib/server-env';
-import { crearTransaccion, obtenerTokensAceptacion } from '@/lib/wompi-server';
+import { crearTransaccion, ErrorPasarela, obtenerTokensAceptacion } from '@/lib/wompi-server';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Status HTTP por tipo de falla de la PASARELA (ver lib/payment-errors.ts).
+ * Lo que no está listado (o un `Error` que no sea `ErrorPasarela`) cae en 502:
+ * falla del lado de Wompi, no de quien pide.
+ */
+const HTTP_POR_CODIGO: Partial<Record<CodigoErrorPago, number>> = {
+  ACCESO_BLOQUEADO: 403,
+  DEMASIADOS_INTENTOS: 429,
+  CONFIGURACION_INVALIDA: 500,
+  SOLICITUD_INVALIDA: 422,
+  PASARELA_NO_DISPONIBLE: 502,
+  SIN_CONEXION: 502,
+};
 
 interface CuerpoPago {
   plan?: unknown;
@@ -128,9 +143,20 @@ export async function POST(peticion: Request) {
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (fallo) {
+    if (fallo instanceof ErrorPasarela) {
+      // Clasificado: sabemos si fue la red, un bloqueo de la pasarela (WAF/IP),
+      // rate limiting, configuración inválida, etc. Ver lib/payment-errors.ts.
+      console.error('[pay] el pago no se pudo iniciar', { codigo: fallo.codigo, mensaje: fallo.message });
+      return error(fallo.message, HTTP_POR_CODIGO[fallo.codigo] ?? 502);
+    }
+
+    // Errores de validación de Wompi (lib/wompi-server.ts los deja como Error
+    // simple con el texto ya legible) u otra excepción no anticipada.
     console.error('[pay] no se pudo crear la transacción', fallo);
     return error(
-      'No pudimos procesar el pago en este momento. No se te cobró nada; intenta de nuevo.',
+      fallo instanceof Error && fallo.message
+        ? fallo.message
+        : 'No pudimos procesar el pago en este momento. No se te cobró nada; intenta de nuevo.',
       502,
     );
   }

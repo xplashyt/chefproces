@@ -6,7 +6,7 @@
  * en esta tabla. Cambiar un precio es cambiar una línea de este archivo.
  */
 
-export type PlanId = 'esencial' | 'basico' | 'avanzado';
+export type PlanId = 'esencial' | 'finde' | 'quincena' | 'basico' | 'intensivo' | 'plus' | 'avanzado';
 
 export interface Plan {
   id: PlanId;
@@ -15,8 +15,8 @@ export interface Plan {
   lema: string;
   /**
    * Precio en pesos colombianos, sin centavos. Wompi cobra en centavos.
-   * En el sitio solo existen tres precios (2.000 / 69.900 / 494.900): no hay
-   * precios tachados ni "antes de", para que nada suene a promoción inflada.
+   * En el sitio no hay precios tachados ni "antes de", para que nada suene a
+   * promoción inflada.
    */
   precio: number;
   /** Marca visual de "el más elegido": solo uno debería tenerla en true. */
@@ -38,7 +38,7 @@ export const PLANES: Plan[] = [
     id: 'esencial',
     nombre: 'Esencial',
     lema: 'Aprende a cocinar bien para tu casa',
-    precio: 2000,
+    precio: 4000,
     destacado: false,
     paraQuien: 'Para ti que arrancas de cero y quieres dejar de improvisar en la cocina.',
     beneficios: [
@@ -49,6 +49,38 @@ export const PLANES: Plan[] = [
     ],
     noIncluye: ['Módulo de negocio', 'Revisión personalizada de tus platos'],
     textoBoton: 'Empezar con Esencial',
+  },
+  {
+    id: 'finde',
+    nombre: 'Fin de semana',
+    lema: 'Domina el sazón en un fin de semana',
+    precio: 10000,
+    destacado: false,
+    paraQuien: 'Para ti que quiere resolver ya el sabor de su comida, sin comprometerse a todo el curso.',
+    beneficios: [
+      'Módulo 2 completo: fuego, sal y sazón',
+      '15 recetas paso a paso con lista de mercado',
+      'Video corto para ver desde el celular',
+      'Acceso por 3 meses',
+    ],
+    noIncluye: ['Módulos de negocio', 'Comunidad de WhatsApp', 'Recetario de postres'],
+    textoBoton: 'Empezar el fin de semana',
+  },
+  {
+    id: 'quincena',
+    nombre: 'Quincena de sabor',
+    lema: 'Dos semanas para dejar de improvisar en la cocina',
+    precio: 25000,
+    destacado: false,
+    paraQuien: 'Para ti que ya tiene las bases y quiere ampliar su repertorio de platos de diario.',
+    beneficios: [
+      'Módulos 1 a 3: cuchillo, sazón, arroces y granos',
+      '50 recetas con video paso a paso',
+      'Tabla de reemplazos con ingredientes de tienda de barrio',
+      'Acceso por 4 meses',
+    ],
+    noIncluye: ['Módulos de negocio', 'Plantilla de costos'],
+    textoBoton: 'Empezar la quincena',
   },
   {
     id: 'basico',
@@ -67,6 +99,38 @@ export const PLANES: Plan[] = [
     ],
     noIncluye: ['Asesoría uno a uno por videollamada'],
     textoBoton: 'Quiero el Básico',
+  },
+  {
+    id: 'intensivo',
+    nombre: 'Intensivo',
+    lema: 'Todo el Básico, con más tiempo y una revisión de tus platos',
+    precio: 100000,
+    destacado: false,
+    paraQuien: 'Para ti que quiere aprovechar el plan Básico a fondo y recibir una guía extra.',
+    beneficios: [
+      'Todo lo del plan Básico, sin recortes',
+      'Plantilla para calcular cuánto te cuesta un plato',
+      'Revisión escrita de 1 de tus platos por el equipo',
+      'Acceso por 18 meses + actualizaciones',
+    ],
+    noIncluye: ['Módulo de precios y ventas por WhatsApp'],
+    textoBoton: 'Quiero el Intensivo',
+  },
+  {
+    id: 'plus',
+    nombre: 'Plus',
+    lema: 'De cocinar rico a dar tus primeros pasos para vender',
+    precio: 150000,
+    destacado: false,
+    paraQuien: 'Para ti que ya casi decide dar el salto a cobrar por lo que cocina.',
+    beneficios: [
+      'Todo lo del plan Básico, sin recortes',
+      'Módulo 7: precios, costos y cómo cobrar sin regalar tu trabajo',
+      'Plantillas de lista de precios y de menú',
+      'Acceso por 24 meses + actualizaciones',
+    ],
+    noIncluye: ['Módulo de fotos y ventas por WhatsApp', 'Revisión escrita de tus platos'],
+    textoBoton: 'Quiero el Plus',
   },
   {
     id: 'avanzado',

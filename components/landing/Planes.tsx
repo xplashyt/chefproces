@@ -8,7 +8,16 @@ import {
   IconoGorroChef,
   IconoTarjeta,
 } from '@/components/Icons';
-import { formatCOP, PLANES } from '@/lib/plans';
+import { formatCOP, PLANES, type PlanId } from '@/lib/plans';
+
+/**
+ * La tabla comparativa de abajo compara solo estos tres planes "insignia": sus
+ * columnas están escritas a mano fila por fila (ver COMPARACION), así que no
+ * puede iterar sobre TODOS los planes sin inventar, por cada plan nuevo, qué
+ * incluye de cada una de las filas. Los planes que no están aquí (los de
+ * precio intermedio) se muestran igual arriba, en las tarjetas de precio.
+ */
+const PLANES_COMPARADOS: PlanId[] = ['esencial', 'basico', 'avanzado'];
 
 /**
  * Filas de la tabla comparativa. Se escriben aquí (y no dentro de cada plan)
@@ -64,8 +73,8 @@ export function Planes() {
           </p>
           <h2 className="titulo-seccion mt-4">Un solo pago. Sin mensualidades ni renovaciones</h2>
           <p className="parrafo mt-4">
-            Los tres planes abren de inmediato. Si empiezas con el Esencial y luego quieres más,
-            escríbenos y pagas solo la diferencia.
+            Los {PLANES.length} planes abren de inmediato. Si empiezas con el Esencial y luego
+            quieres más, escríbenos y pagas solo la diferencia.
           </p>
         </div>
 
@@ -192,7 +201,7 @@ export function Planes() {
         {/* ------------------------------------------------ tabla comparativa */}
         <div className="mt-16">
           <h3 className="text-center text-xl font-black text-carbon-800">
-            Compara los tres planes
+            Compara los planes principales
           </h3>
 
           {/* El scroll horizontal vive DENTRO de este contenedor: la página
@@ -207,7 +216,9 @@ export function Planes() {
                   <th scope="col" className="px-5 py-4 text-sm font-black text-carbon-800">
                     Lo que incluye
                   </th>
-                  {PLANES.map((plan) => (
+                  {/* Solo los 3 planes insignia: son las únicas columnas para las
+                      que COMPARACION trae datos fila por fila (ver arriba). */}
+                  {PLANES.filter((plan) => PLANES_COMPARADOS.includes(plan.id)).map((plan) => (
                     <th
                       key={plan.id}
                       scope="col"

@@ -41,7 +41,7 @@ const PREGUNTAS = [
   {
     pregunta: '¿Cuánto tiempo tengo el acceso?',
     respuesta:
-      'Esencial: 6 meses. Básico: 12 meses con las actualizaciones que salgan en ese periodo. Avanzado: de por vida, incluyendo lo nuevo que agreguemos.',
+      'Esencial: 6 meses. Fin de semana: 3 meses. Quincena de sabor: 4 meses. Básico: 12 meses con las actualizaciones que salgan en ese periodo. Intensivo: 18 meses. Plus: 24 meses. Avanzado: de por vida, incluyendo lo nuevo que agreguemos.',
   },
   {
     pregunta: '¿Puedo cambiarme de plan después?',
